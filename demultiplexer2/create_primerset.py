@@ -1,5 +1,6 @@
+import datetime
 import pandas as pd
-import pkg_resources, datetime
+import importlib.resources as resources
 from pathlib import Path
 
 
@@ -11,9 +12,9 @@ def create_primerset(primerset_name: str, n_primers: int):
         n_primers (int): Number of primers in the primerset.
     """
     # generate a path to save the primerset. This is wherever demultiplexer2 is installed.
-    primerset_savepath = Path(
-        pkg_resources.resource_filename(__name__, "data/primersets/")
-    ).joinpath("{}_primerset.xlsx".format(primerset_name))
+    primerset_savepath = Path(resources.files(__package__)).joinpath(
+        "data/primersets/{}_primerset.xlsx".format(primerset_name)
+    )
 
     if primerset_savepath.is_file():
         print(
