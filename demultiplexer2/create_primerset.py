@@ -55,6 +55,3 @@ def create_primerset(primerset_name: str, n_primers: int):
             datetime.datetime.now().strftime("%H:%M:%S"), primerset_savepath
         )
     )
-
-
-create_primerset("test", 6)

@@ -75,3 +75,18 @@ def find_file_pairs(path_list: list) -> tuple:
                 singles.append(current_path)
 
     return file_pairs, singles
+
+
+def main(path_list: list) -> tuple:
+    """Function to control the pair finding script.
+
+    Args:
+        path_list (list): List of paths e.g. created with glob.glob.
+
+    Returns:
+        tuple: All file pairs found and all single files found.
+    """
+    file_pairs, singles = find_file_pairs(path_list)
+
+    # return
+    return file_pairs, singles
