@@ -1,4 +1,4 @@
-import glob, datetime
+import glob, datetime, sys
 import pandas as pd
 import numpy as np
 from demultiplexer2 import find_file_pairs
@@ -25,7 +25,7 @@ def collect_primerset_information(primerset_path: str) -> tuple:
             )
         )
 
-        return None, None, None
+        sys.exit()
 
     # extract the primer information
     forward_primer = (
@@ -42,7 +42,7 @@ def collect_primerset_information(primerset_path: str) -> tuple:
                 datetime.datetime.now().strftime("%H:%M:%S")
             )
         )
-        return None, None, None
+        sys.exit()
 
     # extract the tagging information
     forward_tags = pd.read_excel(
@@ -76,11 +76,62 @@ def request_combinations(tag_information: object) -> list:
             datetime.datetime.now().strftime("%H:%M:%S")
         )
     )
+    print(
+        "{}: Press any key to cotinue.".format(
+            datetime.datetime.now().strftime("%H:%M:%S")
+        )
+    )
 
-    print(tag_information.to_string)
+    # wait for any key
+    input()
 
-    return "test"
+    # repeat the information from the primerset for easy input
+    print(tag_information.to_string() + "\n")
 
+    # more user output
+    print(
+        "{}: Please indicate all COMBINATIONS by providing the respective line number in the format fwd-rev,fwd-rev...".format(
+            datetime.datetime.now().strftime("%H:%M:%S")
+        )
+    )
+    print(
+        "{}: Example: 1-1,2-2,2-3,4-4,5-5".format(
+            datetime.datetime.now().strftime("%H:%M:%S")
+        )
+    )
+
+    # ask for input
+    combinations = input("Combinations used: ")
+
+    # parse the input
+    combinations = combinations.split(",")
+    combinations = [tuple(combination.split("-")) for combination in combinations]
+    combinations = [(int(comb[0]), int(comb[1])) for comb in combinations]
+
+    # translate to primer names for clean output
+    fwd_tag_names = dict(
+        zip(tag_information.index, tag_information["name_forward_tag"])
+    )
+    rev_tag_names = dict(
+        zip(tag_information.index, tag_information["name_reverse_tag"])
+    )
+
+    combinations = [
+        (fwd_tag_names[combination[0]], rev_tag_names[combination[1]])
+        for combination in combinations
+    ]
+
+    # return the combinations
+    return combinations
+
+def create_tagging_scheme_file(tagging_scheme_name: str, file_pairs: list, combinations_to_use: list):
+    """Function that creates a tagging scheme file and saves it to excel.
+
+    Args:
+        tagging_scheme_name (str): Name of the tagging scheme.
+        file_pairs (list): List of all file pairs to demultiplex.
+        combinations_to_use (list): Primer combinations that were used to generate the dataset.
+    """
 
 def main(tagging_scheme_name: str, data_dir: str, primerset_path: str) -> None:
     """Main function to create a tagging scheme.
@@ -89,9 +140,6 @@ def main(tagging_scheme_name: str, data_dir: str, primerset_path: str) -> None:
         tagging_scheme_name (str): The name of the tagging scheme that is used for saving it.
         data_dir (str): The directory where the files to demultiplex are stored.
         primerset_path (str): The path to the primerset to use for demultiplexing.
-
-    Returns:
-        _type_: _description_
     """
     # collect all file pairs from input folder, give warning if unpaired files are found
     all_files = glob.glob(str(Path(data_dir).joinpath("*.fastq.gz")))
@@ -124,5 +172,7 @@ def main(tagging_scheme_name: str, data_dir: str, primerset_path: str) -> None:
         Path(primerset_path)
     )
 
-    # request input for combinations (form?)
+    # request input for combinations
     combinations_to_use = request_combinations(tag_information)
+
+    # create the input file for the tagging scheme
