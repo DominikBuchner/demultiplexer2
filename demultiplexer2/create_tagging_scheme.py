@@ -62,6 +62,26 @@ def collect_primerset_information(primerset_path: str) -> tuple:
     return forward_primer, reverse_primer, tag_information
 
 
+def request_combinations(tag_information: object) -> list:
+    """Function to request the used combinations from the user.
+
+    Args:
+        tag_information (object): Tag information generated from the primerset.
+
+    Returns:
+        list: List of all tag combinations to be used to generate the tagging scheme.
+    """
+    print(
+        "{}: All primer combinations used in your dataset are required for generating the tagging scheme.".format(
+            datetime.datetime.now().strftime("%H:%M:%S")
+        )
+    )
+
+    print(tag_information.to_string)
+
+    return "test"
+
+
 def main(tagging_scheme_name: str, data_dir: str, primerset_path: str) -> None:
     """Main function to create a tagging scheme.
 
@@ -105,4 +125,4 @@ def main(tagging_scheme_name: str, data_dir: str, primerset_path: str) -> None:
     )
 
     # request input for combinations (form?)
-    pass
+    combinations_to_use = request_combinations(tag_information)
