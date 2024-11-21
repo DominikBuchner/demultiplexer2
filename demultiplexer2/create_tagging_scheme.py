@@ -1,4 +1,4 @@
-import glob, datetime, sys
+import glob, datetime, sys, os
 import pandas as pd
 import numpy as np
 from demultiplexer2 import find_file_pairs
@@ -124,7 +124,10 @@ def request_combinations(tag_information: object) -> list:
     # return the combinations
     return combinations
 
-def create_tagging_scheme_file(tagging_scheme_name: str, file_pairs: list, combinations_to_use: list):
+
+def create_tagging_scheme_file(
+    tagging_scheme_name: str, file_pairs: list, combinations_to_use: list
+):
     """Function that creates a tagging scheme file and saves it to excel.
 
     Args:
@@ -132,6 +135,51 @@ def create_tagging_scheme_file(tagging_scheme_name: str, file_pairs: list, combi
         file_pairs (list): List of all file pairs to demultiplex.
         combinations_to_use (list): Primer combinations that were used to generate the dataset.
     """
+    # extract file names from the file pairs
+    file_pair_names = [(pair[0].name, pair[1].name) for pair in file_pairs]
+
+    # add the names to the paths to have all file data
+    file_data = [
+        (file_pair + file_pair_name)
+        for file_pair, file_pair_name in zip(file_pairs, file_pair_names)
+    ]
+
+    # add the file data to a dataframe
+    tagging_scheme = pd.DataFrame(
+        file_data,
+        columns=[
+            "forward file path",
+            "reverse file path",
+            "forward file name",
+            "reverse file name",
+        ],
+    )
+
+    # generate the primer columns
+    primer_columns = [
+        "{}-{}".format(tag_fwd, tag_rev) for tag_fwd, tag_rev in combinations_to_use
+    ]
+
+    primer_columns = pd.DataFrame([], columns=primer_columns)
+
+    # concat the final tagging scheme
+    tagging_scheme = pd.concat([tagging_scheme, primer_columns], axis=1)
+
+    # build the save path
+    savepath = Path(os.getcwd()).joinpath(
+        "{}_tagging_scheme.xlsx".format(tagging_scheme_name)
+    )
+
+    # save the scheme
+    tagging_scheme.to_excel(savepath, index=False)
+
+    # give user output
+    print(
+        "{}: Tagging scheme saved at {}.".format(
+            datetime.datetime.now().strftime("%H:%M:%S"), savepath
+        )
+    )
+
 
 def main(tagging_scheme_name: str, data_dir: str, primerset_path: str) -> None:
     """Main function to create a tagging scheme.
@@ -176,3 +224,4 @@ def main(tagging_scheme_name: str, data_dir: str, primerset_path: str) -> None:
     combinations_to_use = request_combinations(tag_information)
 
     # create the input file for the tagging scheme
+    create_tagging_scheme_file(tagging_scheme_name, file_pairs, combinations_to_use)

@@ -130,7 +130,12 @@ def main() -> None:
         )
 
     if arguments.function == "demultiplex":
-        pass
+        # run the demultiplexing
+        demultiplexing.main(
+            arguments.primerset_path,
+            arguments.tagging_scheme_path,
+            arguments.output_dir,
+        )
 
 
 # run only if called as a top level script
