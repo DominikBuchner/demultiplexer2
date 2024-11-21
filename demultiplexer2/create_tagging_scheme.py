@@ -1,16 +1,17 @@
 import glob, datetime
 import pandas as pd
+import numpy as np
 from demultiplexer2 import find_file_pairs
 from pathlib import Path
 
 
-def collect_primerset_information(primerset_path: str) -> object:
+def collect_primerset_information(primerset_path: str) -> tuple:
     """Function to parse the primerset file and return as a dataframe to chose from.
     Args:
         primerset_path (str): Path to the primerset file to be used.
 
     Returns:
-        object: Formatted primerset for user output.
+        tuple: Forward primer name, reverse primer name and formatted primerset for user output.
     """
     # parse the specific primers first
     try:
@@ -24,10 +25,41 @@ def collect_primerset_information(primerset_path: str) -> object:
             )
         )
 
-        return None
+        return None, None, None
 
-    forward_primer = general_information["Forward primer (5' - 3')"].item()
-    reverse_primer = general_information["Reverse primer (5' - 3')"].item()
+    # extract the primer information
+    forward_primer = (
+        general_information["Forward primer (5' - 3')"].replace(np.nan, "").values[0]
+    )
+    reverse_primer = (
+        general_information["Reverse primer (5' - 3')"].replace(np.nan, "").values[0]
+    )
+
+    # handle empty primer field accordingly
+    if not forward_primer or not reverse_primer:
+        print(
+            "{}: Please add primer information to your primerset.".format(
+                datetime.datetime.now().strftime("%H:%M:%S")
+            )
+        )
+        return None, None, None
+
+    # extract the tagging information
+    forward_tags = pd.read_excel(
+        primerset_path, sheet_name="forward_tags", index_col=0
+    ).rename(columns={"name": "name_forward_tag"})
+    reverse_tags = pd.read_excel(
+        primerset_path, sheet_name="reverse_tags", index_col=0
+    ).rename(columns={"name": "name_reverse_tag"})
+
+    # concat both tags for easy to read output
+    tag_information = pd.concat(
+        [forward_tags, reverse_tags],
+        axis=1,
+    )
+
+    # return primer names and tags
+    return forward_primer, reverse_primer, tag_information
 
 
 def main(tagging_scheme_name: str, data_dir: str, primerset_path: str) -> None:
@@ -68,6 +100,9 @@ def main(tagging_scheme_name: str, data_dir: str, primerset_path: str) -> None:
         return None
 
     # collect primers / tags / names from primer set
-    primerset_information = collect_primerset_information(Path(primerset_path))
+    forward_primer, reverse_primer, tag_information = collect_primerset_information(
+        Path(primerset_path)
+    )
+
     # request input for combinations (form?)
     pass
