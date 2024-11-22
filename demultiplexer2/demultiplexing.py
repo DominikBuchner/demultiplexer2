@@ -1,6 +1,7 @@
 import gzip
 import pandas as pd
 import numpy as np
+from pathlib import Path
 from Bio.Data.IUPACData import ambiguous_dna_values
 from itertools import product
 from demultiplexer2.create_tagging_scheme import collect_primerset_information
@@ -238,7 +239,29 @@ def demultiplexing(
         demultiplexing_data_value (dict): Value corresponsing to the key from the demultiplexing data, e.g. tag pair --> output
         output_dir (str): Directory to write to.
     """
-    print(demultiplexing_data_key)
+    # generate a dict mapping sample names to actual output paths
+    output_handles = {}
+
+    for sample in demultiplexing_data_value.values():
+        fwd_path = Path(output_dir).joinpath("{}_r1.fastq.gz".format(sample))
+        rev_path = Path(output_dir).joinpath("{}_r2.fastq.gz".format(sample))
+
+        # add paths to the output handles
+        output_handles[sample] = (
+            gzip.open(fwd_path, "wt", compresslevel=6),
+            gzip.open(rev_path, "wt", compresslevel=6),
+        )
+
+    # count some basic statistics
+    total_reads, unmatched_reads = 0, 0
+
+    # extract the length of the fwd tags and reverse tags, can be done from a single tag, since all tags have the same length
+    length_forward_tag, length_reverse_tag = (
+        len(list(demultiplexing_data_value.keys())[0][0]),
+        len(list(demultiplexing_data_value.keys())[0][1]),
+    )
+
+    print(length_forward_tag, length_reverse_tag)
 
 
 def main(primerset_path: str, tagging_scheme_path: str, output_dir: str):
@@ -272,3 +295,4 @@ def main(primerset_path: str, tagging_scheme_path: str, output_dir: str):
     # TODO parallelize at the end
     for key in demultiplexing_data.keys():
         demultiplexing(key, demultiplexing_data[key], output_dir)
+        break
