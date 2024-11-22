@@ -1,6 +1,7 @@
 import gzip
 import pandas as pd
 import numpy as np
+from tqdm import tqdm
 from pathlib import Path
 from Bio.Data.IUPACData import ambiguous_dna_values
 from itertools import product
@@ -296,6 +297,17 @@ def demultiplexing(
         except KeyError:
             unmatched_reads += 1
 
+    # give user output
+    tqdm.write(
+        "{} - {}: {} of {} matched the provided tag sequences ({:.2f} %)".format(
+            Path(demultiplexing_data_key[0]).name,
+            Path(demultiplexing_data_key[1]).name,
+            matched_reads,
+            matched_reads + unmatched_reads,
+            (matched_reads / (matched_reads + unmatched_reads)) * 100,
+        ),
+    )
+
 
 def main(primerset_path: str, tagging_scheme_path: str, output_dir: str):
     """Main function to run the demultiplexing.
@@ -328,4 +340,3 @@ def main(primerset_path: str, tagging_scheme_path: str, output_dir: str):
     # TODO parallelize at the end
     for key in demultiplexing_data.keys():
         demultiplexing(key, demultiplexing_data[key], output_dir)
-        break
