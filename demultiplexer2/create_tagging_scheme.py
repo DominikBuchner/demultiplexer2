@@ -47,10 +47,10 @@ def collect_primerset_information(primerset_path: str) -> tuple:
     # extract the tagging information
     forward_tags = pd.read_excel(
         primerset_path, sheet_name="forward_tags", index_col=0
-    ).rename(columns={"name": "name_forward_tag"})
+    ).rename(columns={"name": "name_forward_tag", "sequence": "sequence_forward_tag"})
     reverse_tags = pd.read_excel(
         primerset_path, sheet_name="reverse_tags", index_col=0
-    ).rename(columns={"name": "name_reverse_tag"})
+    ).rename(columns={"name": "name_reverse_tag", "sequence": "sequence_reverse_tag"})
 
     # concat both tags for easy to read output
     tag_information = pd.concat(
