@@ -17,17 +17,30 @@ def extend_ambiguous_dna(seq: str) -> list:
     return list(map("".join, product(*map(d.get, seq))))
 
 
-def extract_demultiplexing_data(
-    tag_information: object, tagging_scheme_path: str
-) -> dict:
-    """Function to read the tagging scheme and returns tuples with tag information and sample name for all input file pairs
+def extend_tags(tags_used: list, forward_primer: str, reverse_primer: str) -> dict:
+    """Function to extend a given list of tag tuples with the primer sequence so that
+    a) all tags are of the same length
+    b) tags are unique
 
     Args:
-        tag_information (object): Dataframe holding the primerset
-        tagging_scheme_path (str): Path to the tagging scheme
+        tags_used (list): List of tag tuples from the tagging scheme
+        forward_primer (str): Forward primer used in the dataset
+        reverse_primer (str): Reverse primer used in the dataset
 
     Returns:
-        Dict: {(input_fwd, input_rev): ((tag_fwd, tag_rev, output_name), (tag_fwd, tag_rev, output_name) ...}
+        dict: Dictionary with old tag pairs as keys and extended tag pairs as values. Can be multiple tag pairs if ambiguous DNA is detected
+    """
+
+
+def update_tagging_scheme(tag_information: object, tagging_scheme_path: str) -> object:
+    """Function to read the tagging scheme update it with primer sequences instead of names
+
+    Args:
+        tag_information (object): Dataframe holding the primerset.
+        tagging_scheme_path (str): Path to the tagging scheme.
+
+    Returns:
+        Object: Dataframe with the updated tagging scheme.
     """
     tagging_scheme = pd.read_excel(tagging_scheme_path)
 
@@ -58,9 +71,7 @@ def extract_demultiplexing_data(
         columns=dict(zip(tagging_scheme.columns[4:], sequence_header))
     )
 
-    print(tagging_scheme)
-    # for idx, row in tagging_scheme.iterrows():
-    #     print(row["forward file path"])
+    return tagging_scheme
 
 
 def main(primerset_path: str, tagging_scheme_path: str, output_dir: str):
@@ -78,6 +89,6 @@ def main(primerset_path: str, tagging_scheme_path: str, output_dir: str):
 
     # extract the primers used in the tagging scheme, directly translate everything that is needed for demultiplexing
     # input paths, tagging information, output files
-    demultiplexing_data = extract_demultiplexing_data(
-        tag_information, tagging_scheme_path
-    )
+    updated_tagging_scheme = update_tagging_scheme(tag_information, tagging_scheme_path)
+
+    print(updated_tagging_scheme)
