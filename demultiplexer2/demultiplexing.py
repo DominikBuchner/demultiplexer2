@@ -254,7 +254,7 @@ def demultiplexing(
         )
 
     # count some basic statistics
-    total_reads, unmatched_reads = 0, 0
+    matched_reads, unmatched_reads = 0, 0
 
     # extract the length of the fwd tags and reverse tags, can be done from a single tag, since all tags have the same length
     length_forward_tag, length_reverse_tag = (
@@ -283,6 +283,16 @@ def demultiplexing(
             output_sample = demultiplexing_data_value[starting_combination]
 
             # write to the respective output sample
+            output_handles[output_sample][0].write(
+                "@{}\n{}\n+\n{}\n".format(title_fwd, seq_fwd, qual_fwd)
+            )
+
+            output_handles[output_sample][1].write(
+                "@{}\n{}\n+\n{}\n".format(title_rev, seq_rev, qual_rev)
+            )
+
+            # count the matched reads
+            matched_reads += 1
         except KeyError:
             unmatched_reads += 1
 
