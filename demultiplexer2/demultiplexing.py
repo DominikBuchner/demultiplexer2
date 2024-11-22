@@ -279,9 +279,12 @@ def demultiplexing(
 
         # check if the starting combination yields a file
         try:
-            print(demultiplexing_data_value[starting_combination])
+            # get the output sample from the demultiplexing data
+            output_sample = demultiplexing_data_value[starting_combination]
+
+            # write to the respective output sample
         except KeyError:
-            print("No match!")
+            unmatched_reads += 1
 
 
 def main(primerset_path: str, tagging_scheme_path: str, output_dir: str):
