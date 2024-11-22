@@ -17,21 +17,6 @@ def extend_ambiguous_dna(seq: str) -> list:
     return list(map("".join, product(*map(d.get, seq))))
 
 
-def extend_tags(tags_used: list, forward_primer: str, reverse_primer: str) -> dict:
-    """Function to extend a given list of tag tuples with the primer sequence so that
-    a) all tags are of the same length
-    b) tags are unique
-
-    Args:
-        tags_used (list): List of tag tuples from the tagging scheme
-        forward_primer (str): Forward primer used in the dataset
-        reverse_primer (str): Reverse primer used in the dataset
-
-    Returns:
-        dict: Dictionary with old tag pairs as keys and extended tag pairs as values. Can be multiple tag pairs if ambiguous DNA is detected
-    """
-
-
 def update_tagging_scheme(tag_information: object, tagging_scheme_path: str) -> object:
     """Function to read the tagging scheme update it with primer sequences instead of names
 
@@ -74,6 +59,26 @@ def update_tagging_scheme(tag_information: object, tagging_scheme_path: str) -> 
     return tagging_scheme
 
 
+def extend_tags(
+    updated_tagging_scheme: object, forward_primer: str, reverse_primer: str
+) -> dict:
+    """Function calculate unambiguous Tags from a given tagging scheme so that
+    a) all tags are of the same length
+    b) tags are unique
+
+    Args:
+        updated_tagging_scheme (object): Tagging scheme as dataframe.
+        forward_primer (str): Forward primer used in the dataset
+        reverse_primer (str): Reverse primer used in the dataset
+
+    Returns:
+        dict: Dictionary with old tag pairs as keys and extended tag pairs as values. Can be multiple tag pairs if ambiguous DNA is detected
+    """
+    tag_pairs = updated_tagging_scheme.columns[4:]
+
+    print(tag_pairs)
+
+
 def main(primerset_path: str, tagging_scheme_path: str, output_dir: str):
     """Main function to run the demultiplexing.
 
@@ -91,4 +96,5 @@ def main(primerset_path: str, tagging_scheme_path: str, output_dir: str):
     # input paths, tagging information, output files
     updated_tagging_scheme = update_tagging_scheme(tag_information, tagging_scheme_path)
 
-    print(updated_tagging_scheme)
+    # extend tagging information
+    extended_tags = extend_tags(updated_tagging_scheme, forward_primer, reverse_primer)
