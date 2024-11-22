@@ -5,6 +5,7 @@ from pathlib import Path
 from Bio.Data.IUPACData import ambiguous_dna_values
 from itertools import product
 from demultiplexer2.create_tagging_scheme import collect_primerset_information
+from Bio.SeqIO.QualityIO import FastqGeneralIterator
 
 
 def extend_ambiguous_dna(seq: str) -> list:
@@ -261,7 +262,26 @@ def demultiplexing(
         len(list(demultiplexing_data_value.keys())[0][1]),
     )
 
-    print(length_forward_tag, length_reverse_tag)
+    # create the in handles
+    in_handle_fwd, in_handle_rev = (
+        FastqGeneralIterator(gzip.open(Path(demultiplexing_data_key[0]), "rt")),
+        FastqGeneralIterator(gzip.open(Path(demultiplexing_data_key[1]), "rt")),
+    )
+
+    for (title_fwd, seq_fwd, qual_fwd), (title_rev, seq_rev, qual_rev) in zip(
+        in_handle_fwd, in_handle_rev
+    ):
+        # extract the starting base combination
+        starting_combination = (
+            seq_fwd[:length_forward_tag],
+            seq_rev[:length_reverse_tag],
+        )
+
+        # check if the starting combination yields a file
+        try:
+            print(demultiplexing_data_value[starting_combination])
+        except KeyError:
+            print("No match!")
 
 
 def main(primerset_path: str, tagging_scheme_path: str, output_dir: str):
