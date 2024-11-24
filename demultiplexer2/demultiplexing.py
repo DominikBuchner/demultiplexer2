@@ -361,15 +361,8 @@ def main(primerset_path: str, tagging_scheme_path: str, output_dir: str):
         )
     )
 
-    # # TODO parallelize at the end
-    # for key in demultiplexing_data.keys():
-    #     demultiplexing(key, demultiplexing_data[key], output_dir)
-
     # parallelize the demultiplexing
-    with tqdm_joblib(
-        desc="Input files finished", total=len(demultiplexing_data.keys())
-    ) as progress_bar:
-        Parallel(n_jobs=psutil.cpu_count(logical=False))(
-            delayed(demultiplexing)(key, demultiplexing_data[key], output_dir)
-            for key in demultiplexing_data.keys()
-        )
+    Parallel(n_jobs=psutil.cpu_count(logical=False))(
+        delayed(demultiplexing)(key, demultiplexing_data[key], output_dir)
+        for key in demultiplexing_data.keys()
+    )
