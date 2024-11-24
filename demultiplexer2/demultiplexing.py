@@ -1,4 +1,4 @@
-import gzip
+import gzip, datetime, psutil
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
@@ -7,6 +7,8 @@ from Bio.Data.IUPACData import ambiguous_dna_values
 from itertools import product
 from demultiplexer2.create_tagging_scheme import collect_primerset_information
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
+from joblib import Parallel, delayed
+from tqdm_joblib import tqdm_joblib
 
 
 def extend_ambiguous_dna(seq: str) -> list:
@@ -299,7 +301,8 @@ def demultiplexing(
 
     # give user output
     tqdm.write(
-        "{} - {}: {} of {} matched the provided tag sequences ({:.2f} %)".format(
+        "{}: {} - {}: {} of {} sequences matched the provided tag sequences ({:.2f} %)".format(
+            datetime.datetime.now().strftime("%H:%M:%S"),
             Path(demultiplexing_data_key[0]).name,
             Path(demultiplexing_data_key[1]).name,
             matched_reads,
@@ -322,6 +325,13 @@ def main(primerset_path: str, tagging_scheme_path: str, output_dir: str):
         primerset_path
     )
 
+    # user output
+    print(
+        "{}: Primerset successfully loaded.".format(
+            datetime.datetime.now().strftime("%H:%M:%S")
+        )
+    )
+
     # extract the primers used in the tagging scheme, directly translate everything that is needed for demultiplexing
     # input paths, tagging information, output files
     updated_tagging_scheme = update_tagging_scheme(tag_information, tagging_scheme_path)
@@ -334,9 +344,32 @@ def main(primerset_path: str, tagging_scheme_path: str, output_dir: str):
         columns=dict(zip(updated_tagging_scheme.columns[4:], extended_tags))
     )
 
+    # user output
+    print(
+        "{}: Tagging scheme successfully loaded.".format(
+            datetime.datetime.now().strftime("%H:%M:%S")
+        )
+    )
+
     # generate the data needed for demultiplexing as dict from the updated tagging scheme
     demultiplexing_data = generate_demultiplexing_data(updated_tagging_scheme)
 
-    # TODO parallelize at the end
-    for key in demultiplexing_data.keys():
-        demultiplexing(key, demultiplexing_data[key], output_dir)
+    # user output
+    print(
+        "{}: Starting demultiplexing, this may take a while.".format(
+            datetime.datetime.now().strftime("%H:%M:%S")
+        )
+    )
+
+    # # TODO parallelize at the end
+    # for key in demultiplexing_data.keys():
+    #     demultiplexing(key, demultiplexing_data[key], output_dir)
+
+    # parallelize the demultiplexing
+    with tqdm_joblib(
+        desc="Input files finished", total=len(demultiplexing_data.keys())
+    ) as progress_bar:
+        Parallel(n_jobs=psutil.cpu_count(logical=False))(
+            delayed(demultiplexing)(key, demultiplexing_data[key], output_dir)
+            for key in demultiplexing_data.keys()
+        )
