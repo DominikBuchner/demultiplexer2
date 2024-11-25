@@ -92,23 +92,23 @@ def main() -> None:
         type=str,
     )
 
-    # add version control (TODO)
-    # current_version = version("demultiplexer2")
-    # obtainer = GetPyPiLatestVersion()
-    # latest_version = obtainer("demultiplexer2")
+    add version control (TODO)
+    current_version = version("demultiplexer2")
+    obtainer = GetPyPiLatestVersion()
+    latest_version = obtainer("demultiplexer2")
 
-    # # give a user warning if the latest version is not installed
-    # if current_version != latest_version:
-    #     print(
-    #         "{}: Your demultiplexer2 version is outdated. Consider updating to the latest version.".format(
-    #             datetime.datetime.now().strftime("%H:%M:%S")
-    #         )
-    #     )
+    # give a user warning if the latest version is not installed
+    if current_version != latest_version:
+        print(
+            "{}: Your demultiplexer2 version is outdated. Consider updating to the latest version.".format(
+                datetime.datetime.now().strftime("%H:%M:%S")
+            )
+        )
 
-    # # add the version argument
-    # parser.add_argument(
-    #     "--version", action="version", version=version("demultiplexer2")
-    # )
+    # add the version argument
+    parser.add_argument(
+        "--version", action="version", version=version("demultiplexer2")
+    )
 
     # parse the arguments
     arguments = parser.parse_args()

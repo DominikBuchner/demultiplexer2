@@ -8,7 +8,6 @@ from itertools import product
 from demultiplexer2.create_tagging_scheme import collect_primerset_information
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
 from joblib import Parallel, delayed
-from tqdm_joblib import tqdm_joblib
 
 
 def extend_ambiguous_dna(seq: str) -> list:
