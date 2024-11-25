@@ -34,3 +34,11 @@ demultiplexer2 create_primerset --name NameOfPrimerset --n_primers NumberOfPrime
 ```
 * --name: Specifies the name of the primerset (e.g., fwh2F2-fwhR2n).
 * --n_primers: Indicates the number of primers in your dataset.
+
+The *primerset* is an Excel file that contains critical information organized into three sheets:
+
+1. General Information: Stores details about the primers used for amplification.
+2. Forward Tags: Contains the names and sequences of the tags associated with the forward primers.
+3. Reverse Tags: Contains the names and sequences of the tags associated with the reverse primers.
+
+
