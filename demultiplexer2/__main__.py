@@ -92,7 +92,7 @@ def main() -> None:
         type=str,
     )
 
-    add version control (TODO)
+    # add version control
     current_version = version("demultiplexer2")
     obtainer = GetPyPiLatestVersion()
     latest_version = obtainer("demultiplexer2")
