@@ -4,4 +4,6 @@
 
 ## Introduction 
 
+**Demultiplexer2** is a Python package designed to efficiently demultiplex paired-end Illumina sequencing reads by identifying and sorting inline tags, enabling streamlined downstream analysis.
+
 ## Installation and Usage
