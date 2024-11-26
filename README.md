@@ -41,4 +41,32 @@ The *primerset* is an Excel file that contains critical information organized in
 2. Forward Tags: Contains the names and sequences of the tags associated with the forward primers.
 3. Reverse Tags: Contains the names and sequences of the tags associated with the reverse primers.
 
+Fill out the primerset file before continuing with the next step.
+
+### Step 2: Create a Tagging scheme
+
+To create a new tagging scheme, use the following command:
+
+```
+demultiplexer2 create_tagging_scheme --name NameOfTaggingScheme --data_dir InputDirectory --primerset_path PathToPrimerset
+```
+* --name: Specifies the name of the tagging scheme (e.g., MyFirstStudy).
+* --data_dir: Specifies the directory with all files you want to demultiplex.
+* --primerset_path: Specifies the path to the primerset you want to use to demultiplex this dataset.
+
+The *tagging scheme* is an Excel file that links your input files to sample names after demultiplexing. It will be save to the current working directory.
+The sample names have to be added in the tagging scheme. Fill out the tagging scheme before continuing with the next step.
+
+### Step 3: Demultiplex
+
+To run the demultiplexing algorithm use this command:
+
+```
+demultiplexer2 demultiplex --primerset_path PathToPrimerset --tagging_scheme_path PathToTaggingScheme --output_dir OutputDirectory
+```
+* --primerset_path: Specifies the path to the primerset you want to use to demultiplex this dataset.
+* --tagging_scheme_path: Specifies the path to the tagging scheme you want to use to demultiplex this dataset.
+* --output_dir: Specifies the output directory to write to.
+
+Given this information, demultiplexer2 will demultiplex your input to your output directory and give some statistics about how many reads could be assigned to tags. Unmatched reads will be directly discarded. 
 
