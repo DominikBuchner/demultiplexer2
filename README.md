@@ -50,7 +50,7 @@ To create a new tagging scheme, use the following command:
 demultiplexer2 create_tagging_scheme --name NameOfTaggingScheme --data_dir InputDirectory --primerset_path PathToPrimerset
 ```
 * --name: Specifies the name of the tagging scheme (e.g., MyFirstStudy).
-* --data_dir: Specifies the directory with all files you want to demultiplex.
+* --data_dir: Specifies the directory with all files you want to demultiplex (gzipped fastq files).
 * --primerset_path: Specifies the path to the primerset you want to use to demultiplex this dataset.
 
 The *tagging scheme* is an Excel file that links your input files to sample names after demultiplexing. It will be save to the current working directory.
@@ -67,7 +67,7 @@ demultiplexer2 demultiplex --primerset_path PathToPrimerset --tagging_scheme_pat
 * --tagging_scheme_path: Specifies the path to the tagging scheme you want to use to demultiplex this dataset.
 * --output_dir: Specifies the output directory to write to.
 
-Given this information, demultiplexer2 will demultiplex your input to your output directory and give some statistics about how many reads could be assigned to tags. Unmatched reads will be directly discarded. 
+Given this information, demultiplexer2 will demultiplex your input to your output directory and give some statistics about how many reads could be assigned to tags. Unmatched reads will be directly discarded. The output will be gzipped fastq files.
 
 ```
 08:58:58: TEST_001_r1.fastq.gz - TEST_001_r2.fastq.gz: 16865 of 100000 sequences matched the provided tag sequences (16.86 %)
