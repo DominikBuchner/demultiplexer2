@@ -69,3 +69,7 @@ demultiplexer2 demultiplex --primerset_path PathToPrimerset --tagging_scheme_pat
 
 Given this information, demultiplexer2 will demultiplex your input to your output directory and give some statistics about how many reads could be assigned to tags. Unmatched reads will be directly discarded. 
 
+```
+08:58:58: TEST_001_r1.fastq.gz - TEST_001_r2.fastq.gz: 16865 of 100000 sequences matched the provided tag sequences (16.86 %)
+```
+
