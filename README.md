@@ -13,7 +13,6 @@ You can install **demultiplexer2** using pip:
 ```
 pip install demultiplexer2
 ```
-When 
 
 When updates are released, users will be notified and can upgrade to the latest version with:
 
