@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="demultiplexer2",
-    version="1.0.2",
+    version="1.0.3",
     author="Dominik Buchner",
     author_email="dominik.buchner@uni-due.de",
     description="A python command line interface to demultiplex illumina reads.",
@@ -22,6 +22,7 @@ setuptools.setup(
         "pandas >= 2.2.3",
         "numpy>=1.24.0, <2.0.0",
         "tqdm>=4.66.4",
+        "openpyxl>=3.1.1",
     ],
     include_package_data=True,
     classifiers=[
