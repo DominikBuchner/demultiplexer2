@@ -190,7 +190,7 @@ def main(tagging_scheme_name: str, data_dir: str, primerset_path: str) -> None:
         primerset_path (str): The path to the primerset to use for demultiplexing.
     """
     # collect all file pairs from input folder, give warning if unpaired files are found
-    all_files = glob.glob(str(Path(data_dir).joinpath("*.fastq.gz")))
+    all_files = sorted(glob.glob(str(Path(data_dir).joinpath("*.fastq.gz"))))
     file_pairs, singles = find_file_pairs.find_file_pairs(all_files)
 
     # give error message file cannot be matched
