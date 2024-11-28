@@ -1,4 +1,4 @@
-import gzip, datetime, psutil
+import gzip, datetime, psutil, pickle, glob, os
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
@@ -270,6 +270,9 @@ def demultiplexing(
         FastqGeneralIterator(gzip.open(Path(demultiplexing_data_key[1]), "rt")),
     )
 
+    # store the data of unmatched sequences for reporting
+    unmatched_combinations = {}
+
     for (title_fwd, seq_fwd, qual_fwd), (title_rev, seq_rev, qual_rev) in zip(
         in_handle_fwd, in_handle_rev
     ):
@@ -296,7 +299,22 @@ def demultiplexing(
             # count the matched reads
             matched_reads += 1
         except KeyError:
+            # add the unmatched combination to the output if it exists, else add it as a new key
+            try:
+                unmatched_combinations[starting_combination] += 1
+            except KeyError:
+                unmatched_combinations[starting_combination] = 1
+
             unmatched_reads += 1
+
+    # pickle the unmatched read for parsing later if there are any
+    if unmatched_reads:
+        pickle_name = "unmatched_{}_{}.pkl".format(
+            Path(demultiplexing_data_key[0]).name, Path(demultiplexing_data_key[1]).name
+        )
+
+        with open(Path(output_dir).joinpath(pickle_name), "wb") as pkl_output:
+            pickle.dump(unmatched_combinations, pkl_output)
 
     # give user output
     tqdm.write(
@@ -309,6 +327,41 @@ def demultiplexing(
             (matched_reads / (matched_reads + unmatched_reads)) * 100,
         ),
     )
+
+
+def create_unmatched_log(output_dir: str):
+    """Function to create a logfile of all unmatched tags in Excel format.
+
+    Args:
+        output_dir (str): Output dir from demultiplexing step. Will be scanned for pickled data.
+    """
+    # collect all pickle files from the output
+    pickle_files = glob.glob(str(Path(output_dir).joinpath("*.pkl")))
+
+    # generate an output file
+    unmatched_log_savename = Path(output_dir).joinpath("unmatched_logfile.xlsx")
+
+    # open the logfile to append different sheet
+    with pd.ExcelWriter(unmatched_log_savename, mode="w", engine="openpyxl") as writer:
+        # go through the pickled outputs, extract the name of the sheet first
+        for pickle_file in pickle_files:
+            sheet_name = Path(pickle_file).stem.removeprefix("unmatched_")
+            sheet_name = sheet_name.split(".")[0]
+
+            # load the pickle data
+            with open(Path(pickle_file), "rb") as pickle_input:
+                log_data = pickle.load(pickle_input)
+
+            log_data = [[key[0], key[1], log_data[key]] for key in log_data.keys()]
+
+            # transform to dataframe
+            log_data = pd.DataFrame(
+                log_data, columns=["forward_tag", "reverse_tag", "count"]
+            ).sort_values(by="count", ascending=False)
+
+            log_data.to_excel(writer, sheet_name=sheet_name, index=False)
+
+            os.remove(Path(pickle_file))
 
 
 def main(primerset_path: str, tagging_scheme_path: str, output_dir: str):
@@ -364,4 +417,19 @@ def main(primerset_path: str, tagging_scheme_path: str, output_dir: str):
     Parallel(n_jobs=psutil.cpu_count(logical=False))(
         delayed(demultiplexing)(key, demultiplexing_data[key], output_dir)
         for key in demultiplexing_data.keys()
+    )
+
+    # user output
+    print(
+        "{}: Generating logfile.".format(datetime.datetime.now().strftime("%H:%M:%S"))
+    )
+
+    # generate the logfile
+    create_unmatched_log(output_dir)
+
+    # user output
+    print(
+        "{}: Logfile with unmatched tags saved to the output directory.".format(
+            datetime.datetime.now().strftime("%H:%M:%S")
+        )
     )
