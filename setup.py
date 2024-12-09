@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="demultiplexer2",
-    version="1.1.1",
+    version="1.1.2",
     author="Dominik Buchner",
     author_email="dominik.buchner@uni-due.de",
     description="A python command line interface to demultiplex illumina reads.",
@@ -30,7 +30,7 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    python_requires=">=3.10",
+    python_requires=">=3.8",
     entry_points={
         "console_scripts": [
             "demultiplexer2 = demultiplexer2.__main__:main",
