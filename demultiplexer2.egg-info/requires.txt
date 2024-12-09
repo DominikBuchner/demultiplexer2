@@ -1,0 +1,8 @@
+psutil>=5.7.3
+biopython>=1.84
+joblib>=0.16.0
+get_pypi_latest_version>=0.0.12
+pandas>=2.2.3
+numpy<2.0.0,>=1.24.0
+tqdm>=4.66.4
+openpyxl>=3.1.1
