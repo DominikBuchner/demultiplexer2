@@ -414,7 +414,7 @@ def main(primerset_path: str, tagging_scheme_path: str, output_dir: str):
     )
 
     # parallelize the demultiplexing
-    Parallel(n_jobs=psutil.cpu_count(logical=False))(
+    Parallel(n_jobs=psutil.cpu_count(logical=True))(
         delayed(demultiplexing)(key, demultiplexing_data[key], output_dir)
         for key in demultiplexing_data.keys()
     )
