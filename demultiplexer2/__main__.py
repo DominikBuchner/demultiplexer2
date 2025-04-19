@@ -1,6 +1,5 @@
-import argparse, datetime, sys
+import argparse, datetime, sys, luddite
 from importlib.metadata import version
-from get_pypi_latest_version import GetPyPiLatestVersion
 from demultiplexer2 import create_primerset, create_tagging_scheme, demultiplexing
 
 
@@ -94,8 +93,7 @@ def main() -> None:
 
     # add version control
     current_version = version("demultiplexer2")
-    obtainer = GetPyPiLatestVersion()
-    latest_version = obtainer("demultiplexer2")
+    latest_version = luddite.get_version_pypi("demultiplexer2")
 
     # give a user warning if the latest version is not installed
     if current_version != latest_version:

@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="demultiplexer2",
-    version="1.1.4",
+    version="1.1.5",
     author="Dominik Buchner",
     author_email="dominik.buchner@uni-due.de",
     description="A python command line interface to demultiplex illumina reads.",
@@ -18,7 +18,7 @@ setuptools.setup(
         "psutil >= 5.7.3",
         "biopython >= 1.84",
         "joblib >= 0.16.0",
-        "get_pypi_latest_version >= 0.0.12",
+        "luddite >= 1.0.4",
         "pandas >= 2.2.3",
         "numpy>=1.24.0, <2.0.0",
         "tqdm>=4.66.4",
