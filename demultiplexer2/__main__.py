@@ -1,4 +1,4 @@
-import argparse, datetime, sys, luddite
+import argparse, datetime, sys, luddite, duckdb
 from importlib.metadata import version
 from demultiplexer2 import create_primerset, create_tagging_scheme, demultiplexing
 

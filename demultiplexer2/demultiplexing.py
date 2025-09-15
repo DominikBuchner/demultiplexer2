@@ -1,4 +1,4 @@
-import gzip, datetime, psutil, pickle, glob, os
+import datetime, dnaio, duckdb
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
@@ -6,8 +6,9 @@ from pathlib import Path
 from Bio.Data.IUPACData import ambiguous_dna_values
 from itertools import product
 from demultiplexer2.create_tagging_scheme import collect_primerset_information
-from Bio.SeqIO.QualityIO import FastqGeneralIterator
 from joblib import Parallel, delayed
+import pyarrow as pa
+import pyarrow.parquet as pq
 
 
 def extend_ambiguous_dna(seq: str) -> list:
@@ -177,191 +178,73 @@ def extend_tags(
     return extended_tags
 
 
-def generate_demultiplexing_data(updated_tagging_scheme: object) -> dict:
-    """Creates a dict that holds all data needed for demultiplexing the files in the form of
-    {(input_fwd, input_rev): {(tag_fwd, tag_rev) : file_name1}, (tag_fwd, tag_rev): file_name2...
-     (input_fwd2, input_rev2): {(tag_fwd, tag_rev) : file_name3}, (tag_fwd, tag_rev): file_name4...
-    }
-
-    Args:
-        updated_tagging_scheme (object): Dataframe with the updated tagging scheme
-
-    Returns:
-        dict: dict with demultiplexing data
-    """
-    # remove empty data from updated_tagging_scheme
-    updated_tagging_scheme = updated_tagging_scheme.replace(np.nan, "")
-
-    # extract the tag combinations from the column names
-    tag_combinations = updated_tagging_scheme.columns[4:]
-
-    # extend ambiguoities if there are any
-    extended_combinations = {}
-
-    for tag_combination in tag_combinations:
-        fwd_tag, rev_tag = tag_combination[0], tag_combination[1]
-        extended_fwd_tags, extended_rev_tags = extend_ambiguous_dna(
-            fwd_tag
-        ), extend_ambiguous_dna(rev_tag)
-
-        # compute all combinations
-        extended_combinations[tag_combination] = [
-            (fwd_tag, rev_tag)
-            for fwd_tag in extended_fwd_tags
-            for rev_tag in extended_rev_tags
-        ]
-
-    # store all data needed for demultiplexing here
-    demultiplexing_data = {}
-
-    # go over the individual rows of the updated tagging scheme
-    for idx, row in updated_tagging_scheme.iterrows():
-        input_fwd, input_rev = row["forward file path"], row["reverse file path"]
-
-        output_per_input = {}
-        # loop over the tag combinations to retrieve the extended combinations
-        for tag_combination in updated_tagging_scheme.columns[4:]:
-            for combination in extended_combinations[tag_combination]:
-                # only add data that from combinations connected to samples
-                if row[tag_combination] != "":
-                    output_per_input[combination] = row[tag_combination]
-
-        # update the demultiplexing data
-        demultiplexing_data[(input_fwd, input_rev)] = output_per_input
-
-    return demultiplexing_data
-
-
-def demultiplexing(
-    demultiplexing_data_key: str, demultiplexing_data_value: dict, output_dir: str
+def convert_to_parquet(
+    forward_path,
+    reverse_path,
+    forward_file,
+    reverse_file,
+    forward_tag_length,
+    reverse_tag_length,
+    file_index,
+    output_dir,
 ):
-    """Function to run the demultiplexing.
+    # create a filename for the parquet output
+    parquet_path = Path(output_dir).joinpath(f"{file_index}.parquet.snappy")
 
-    Args:
-        demultiplexing_data_key (str): Key e.g. input file pair from the demultiplexing data
-        demultiplexing_data_value (dict): Value corresponsing to the key from the demultiplexing data, e.g. tag pair --> output
-        output_dir (str): Directory to write to.
-    """
-    # generate a dict mapping sample names to actual output paths
-    output_handles = {}
-
-    for sample in demultiplexing_data_value.values():
-        fwd_path = Path(output_dir).joinpath("{}_r1.fastq.gz".format(sample))
-        rev_path = Path(output_dir).joinpath("{}_r2.fastq.gz".format(sample))
-
-        # add paths to the output handles
-        output_handles[sample] = (
-            gzip.open(fwd_path, "wt", compresslevel=6),
-            gzip.open(rev_path, "wt", compresslevel=6),
-        )
-
-    # count some basic statistics
-    matched_reads, unmatched_reads = 0, 0
-
-    # extract the length of the fwd tags and reverse tags, can be done from a single tag, since all tags have the same length
-    length_forward_tag, length_reverse_tag = (
-        len(list(demultiplexing_data_value.keys())[0][0]),
-        len(list(demultiplexing_data_value.keys())[0][1]),
+    # define the schema for writing
+    schema = pa.schema(
+        [
+            ("file_forward", pa.string()),
+            ("file_reverse", pa.string()),
+            ("name_forward", pa.string()),
+            ("name_reverse", pa.string()),
+            ("sequence_forward", pa.string()),
+            ("sequence_reverse", pa.string()),
+            ("quality_forward", pa.string()),
+            ("quality_reverse", pa.string()),
+            ("tag_forward", pa.string()),
+            ("tag_reverse", pa.string()),
+        ]
     )
 
-    # create the in handles
-    in_handle_fwd, in_handle_rev = (
-        FastqGeneralIterator(gzip.open(Path(demultiplexing_data_key[0]), "rt")),
-        FastqGeneralIterator(gzip.open(Path(demultiplexing_data_key[1]), "rt")),
-    )
+    with pq.ParquetWriter(parquet_path, schema, compression="snappy") as writer:
+        with dnaio.open(forward_path, reverse_path, mode="r") as reader:
+            # define the columns for the table
+            columns = {
+                "file_forward": [],
+                "file_reverse": [],
+                "name_forward": [],
+                "name_reverse": [],
+                "sequence_forward": [],
+                "sequence_reverse": [],
+                "quality_forward": [],
+                "quality_reverse": [],
+                "tag_forward": [],
+                "tag_reverse": [],
+            }
 
-    # store the data of unmatched sequences for reporting
-    unmatched_combinations = {}
+            batch_size = 250_000
+            batch = {k: [] for k in columns.keys()}
 
-    for (title_fwd, seq_fwd, qual_fwd), (title_rev, seq_rev, qual_rev) in zip(
-        in_handle_fwd, in_handle_rev
-    ):
-        # extract the starting base combination
-        starting_combination = (
-            seq_fwd[:length_forward_tag],
-            seq_rev[:length_reverse_tag],
-        )
+            for idx, (fwd, rev) in enumerate(reader):
+                batch["file_forward"].append(forward_file)
+                batch["file_reverse"].append(reverse_file)
+                batch["name_forward"].append(fwd.name)
+                batch["name_reverse"].append(rev.name)
+                batch["sequence_forward"].append(fwd.sequence)
+                batch["sequence_reverse"].append(rev.sequence)
+                batch["quality_forward"].append(fwd.qualities)
+                batch["quality_reverse"].append(rev.qualities)
+                batch["tag_forward"].append(fwd.sequence[:forward_tag_length])
+                batch["tag_reverse"].append(rev.sequence[:reverse_tag_length])
 
-        # check if the starting combination yields a file
-        try:
-            # get the output sample from the demultiplexing data
-            output_sample = demultiplexing_data_value[starting_combination]
+                if (idx + 1) % batch_size == 0:
+                    writer.write_table(pa.table(batch, schema=schema))
+                    batch = {k: [] for k in columns.keys()}
 
-            # write to the respective output sample
-            output_handles[output_sample][0].write(
-                "@{}\n{}\n+\n{}\n".format(title_fwd, seq_fwd, qual_fwd)
-            )
-
-            output_handles[output_sample][1].write(
-                "@{}\n{}\n+\n{}\n".format(title_rev, seq_rev, qual_rev)
-            )
-
-            # count the matched reads
-            matched_reads += 1
-        except KeyError:
-            # add the unmatched combination to the output if it exists, else add it as a new key
-            try:
-                unmatched_combinations[starting_combination] += 1
-            except KeyError:
-                unmatched_combinations[starting_combination] = 1
-
-            unmatched_reads += 1
-
-    # pickle the unmatched read for parsing later if there are any
-    if unmatched_reads:
-        pickle_name = "unmatched_{}_{}.pkl".format(
-            Path(demultiplexing_data_key[0]).name, Path(demultiplexing_data_key[1]).name
-        )
-
-        with open(Path(output_dir).joinpath(pickle_name), "wb") as pkl_output:
-            pickle.dump(unmatched_combinations, pkl_output)
-
-    # give user output
-    tqdm.write(
-        "{}: {} - {}: {} of {} sequences matched the provided tag sequences ({:.2f} %)".format(
-            datetime.datetime.now().strftime("%H:%M:%S"),
-            Path(demultiplexing_data_key[0]).name,
-            Path(demultiplexing_data_key[1]).name,
-            matched_reads,
-            matched_reads + unmatched_reads,
-            (matched_reads / (matched_reads + unmatched_reads)) * 100,
-        ),
-    )
-
-
-def create_unmatched_log(output_dir: str):
-    """Function to create a logfile of all unmatched tags in Excel format.
-
-    Args:
-        output_dir (str): Output dir from demultiplexing step. Will be scanned for pickled data.
-    """
-    # collect all pickle files from the output
-    pickle_files = glob.glob(str(Path(output_dir).joinpath("*.pkl")))
-
-    # generate an output file
-    unmatched_log_savename = Path(output_dir).joinpath("unmatched_logfile.xlsx")
-
-    # open the logfile to append different sheet
-    with pd.ExcelWriter(unmatched_log_savename, mode="w", engine="openpyxl") as writer:
-        # go through the pickled outputs, extract the name of the sheet first
-        for pickle_file in pickle_files:
-            sheet_name = Path(pickle_file).stem.removeprefix("unmatched_")
-            sheet_name = sheet_name.split(".")[0]
-
-            # load the pickle data
-            with open(Path(pickle_file), "rb") as pickle_input:
-                log_data = pickle.load(pickle_input)
-
-            log_data = [[key[0], key[1], log_data[key]] for key in log_data.keys()]
-
-            # transform to dataframe
-            log_data = pd.DataFrame(
-                log_data, columns=["forward_tag", "reverse_tag", "count"]
-            ).sort_values(by="count", ascending=False)
-
-            log_data.to_excel(writer, sheet_name=sheet_name, index=False)
-
-            os.remove(Path(pickle_file))
+            # write remaining rows
+            if any(len(v) > 0 for v in batch.values()):
+                writer.write_table(pa.table(batch, schema=schema))
 
 
 def main(primerset_path: str, tagging_scheme_path: str, output_dir: str):
@@ -403,33 +286,30 @@ def main(primerset_path: str, tagging_scheme_path: str, output_dir: str):
         )
     )
 
-    # generate the data needed for demultiplexing as dict from the updated tagging scheme
-    demultiplexing_data = generate_demultiplexing_data(updated_tagging_scheme)
-
     # user output
     print(
-        "{}: Starting demultiplexing, this may take a while.".format(
+        "{}: Building read database.".format(
             datetime.datetime.now().strftime("%H:%M:%S")
         )
     )
 
-    # parallelize the demultiplexing
-    Parallel(n_jobs=psutil.cpu_count(logical=True))(
-        delayed(demultiplexing)(key, demultiplexing_data[key], output_dir)
-        for key in demultiplexing_data.keys()
-    )
+    # extract the tag length of the forward / reverse tags
+    fwd_tag_length, rev_tag_length = len(extended_tags[0][0]), len(extended_tags[0][1])
 
-    # user output
-    print(
-        "{}: Generating logfile.".format(datetime.datetime.now().strftime("%H:%M:%S"))
-    )
-
-    # generate the logfile
-    create_unmatched_log(output_dir)
-
-    # user output
-    print(
-        "{}: Logfile with unmatched tags saved to the output directory.".format(
-            datetime.datetime.now().strftime("%H:%M:%S")
+    # prepare a list of delayed tasks
+    tasks = [
+        delayed(convert_to_parquet)(
+            row["forward file path"],
+            row["reverse file path"],
+            row["forward file name"],
+            row["reverse file name"],
+            fwd_tag_length,
+            rev_tag_length,
+            index,
+            output_dir,
         )
-    )
+        for index, row in updated_tagging_scheme.iterrows()
+    ]
+
+    # run in parallel
+    Parallel(n_jobs=-1)(tasks)
