@@ -247,6 +247,27 @@ def convert_to_parquet(
                 writer.write_table(pa.table(batch, schema=schema))
 
 
+def build_database(output_dir):
+    # gather all parquet files
+    parquet_path = Path(output_dir).joinpath("*.parquet.snappy")
+
+    # build the database name
+    read_database = Path(output_dir).joinpath("read_database.duckdb")
+
+    # open the connection
+    read_database_connection = duckdb.connect(read_database)
+
+    # ingest the parquet
+    read_database_connection.execute(
+        f"""
+        CREATE OR REPLACE TABLE read_database AS
+        SELECT * FROM read_parquet('{parquet_path}')
+        """
+    )
+
+    read_database_connection.close()
+
+
 def main(primerset_path: str, tagging_scheme_path: str, output_dir: str):
     """Main function to run the demultiplexing.
 
@@ -296,20 +317,23 @@ def main(primerset_path: str, tagging_scheme_path: str, output_dir: str):
     # extract the tag length of the forward / reverse tags
     fwd_tag_length, rev_tag_length = len(extended_tags[0][0]), len(extended_tags[0][1])
 
-    # prepare a list of delayed tasks
-    tasks = [
-        delayed(convert_to_parquet)(
-            row["forward file path"],
-            row["reverse file path"],
-            row["forward file name"],
-            row["reverse file name"],
-            fwd_tag_length,
-            rev_tag_length,
-            index,
-            output_dir,
-        )
-        for index, row in updated_tagging_scheme.iterrows()
-    ]
+    # # prepare a list of delayed tasks
+    # tasks = [
+    #     delayed(convert_to_parquet)(
+    #         row["forward file path"],
+    #         row["reverse file path"],
+    #         row["forward file name"],
+    #         row["reverse file name"],
+    #         fwd_tag_length,
+    #         rev_tag_length,
+    #         index,
+    #         output_dir,
+    #     )
+    #     for index, row in updated_tagging_scheme.iterrows()
+    # ]
 
-    # run in parallel
-    Parallel(n_jobs=-1)(tasks)
+    # # run in parallel
+    # Parallel(n_jobs=-1)(tasks)
+
+    # transform parquet to duckdb database
+    build_database(output_dir)
