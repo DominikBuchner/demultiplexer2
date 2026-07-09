@@ -1,4 +1,4 @@
-# Demultiplexer2
+# Demultiplexer2 - has been replaced by demultiplexer3 -> https://github.com/DominikBuchner/demultiplexer3
 
 ![logo](https://github.com/user-attachments/assets/e9c034d1-be0f-4e06-a78d-95fcaf03e926)
 
